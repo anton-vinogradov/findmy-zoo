@@ -40,15 +40,21 @@ curl -fsSL https://raw.githubusercontent.com/anton-vinogradov/findmy-zoo/main/in
 
 install.sh: venv + зависимости, копирует `config.json` из примера, поднимает
 **macless anisette-контейнер** (`dadoum/anisette-v3-server` на `127.0.0.1:6969`, docker/podman),
-регистрирует systemd-сервис `findmy-zoo` на порту **8815**.
+регистрирует systemd-сервис `findmy-zoo` на порту **8815** и ставит команду-мастер.
 
-Затем один раз залогинься в Apple (пароль вводится с клавиатуры, в репо/конфиг не пишется):
+Затем — **один шаг**, мастер настройки:
 
 ```bash
-cd /opt/findmy-zoo
-.venv/bin/python collector/login.py apple   # iCloud-сессия для устройств
-.venv/bin/python collector/login.py tags    # аккаунт FindMy.py для меток
+findmy-zoo-setup
 ```
+
+Спросит Apple ID + пароль + код 2FA (один раз — это защита Apple, обойти нельзя; пароль
+идёт только в кэш-сессию на диске, в репо/конфиг не пишется). Сам залогинит устройства,
+по желанию метки, пропишет `appleId` в конфиг и перезапустит сервис. Прогнать повторно
+можно когда угодно (например, чтобы включить метки позже или обновить сессию).
+
+<sub>Под капотом — `collector/setup.py`; при желании те же шаги можно сделать точечно через
+`collector/login.py apple|tags`.</sub>
 
 ## Настройка меток
 
@@ -72,7 +78,8 @@ anisette встроенно.
 collector/hub.py      — фоновые опросы источников + HTTP (stdlib) + /api/points
 collector/sources.py  — TagSource (FindMy.py) и IcloudSource (pyicloud)
 collector/store.py    — SQLite, дедуп по (entity_id, ts), окно retentionH
-collector/login.py    — разовый интерактивный логин в Apple (getpass + 2FA)
+collector/setup.py    — мастер настройки в одну команду (findmy-zoo-setup)
+collector/login.py    — точечный логин в Apple (apple|tags), для ручного режима
 index.html/app.js/... — Leaflet-карта, фильтры по типу, автообновление 30 с
 install.sh            — systemd + macless anisette-контейнер
 ```

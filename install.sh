@@ -91,12 +91,19 @@ $SUDO systemctl daemon-reload
 $SUDO systemctl enable "$SVC" >/dev/null 2>&1 || true
 $SUDO systemctl restart "$SVC"
 
+echo "→ команда-мастер findmy-zoo-setup…"
+$SUDO tee /usr/local/bin/findmy-zoo-setup >/dev/null <<WRAP
+#!/usr/bin/env bash
+exec "$DIR/.venv/bin/python" "$DIR/collector/setup.py" "\$@"
+WRAP
+$SUDO chmod +x /usr/local/bin/findmy-zoo-setup
+
 IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
 echo
-echo "✓ готово. Карта: http://${IP:-<этот-сервер>}:$PORT"
-echo "  ДАЛЬШЕ (обязательно, один раз — пароль вводится с клавиатуры, в репо не попадает):"
-echo "    $DIR/.venv/bin/python $DIR/collector/login.py apple   # устройства (iCloud)"
-echo "    $DIR/.venv/bin/python $DIR/collector/login.py tags    # метки (AirTag/DIY)"
-echo "  правь ключи меток и Apple ID в: $DIR/collector/config.json"
+echo "✓ установлено. Карта: http://${IP:-<этот-сервер>}:$PORT"
+echo
+echo "  ОСТАЛСЯ ОДИН ШАГ — запусти мастер (спросит Apple ID + пароль + код 2FA, один раз):"
+echo "      findmy-zoo-setup"
+echo
 echo "  логи:     journalctl -u $SVC -f"
 echo "  обновить: повтори ту же команду установки"
