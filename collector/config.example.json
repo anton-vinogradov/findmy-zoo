@@ -1,0 +1,32 @@
+{
+  "port": 8815,
+  "retentionH": 24,
+  "sources": {
+    "tags": {
+      "enabled": true,
+      "_note": "AirTag'и и DIY-метки (OpenHaystack) через FindMy.py. anisetteUrl=http://127.0.0.1:6969 — локальный контейнер (поднимает install.sh). Поставь null, чтобы FindMy.py генерил anisette встроенно (без контейнера).",
+      "anisetteUrl": "http://127.0.0.1:6969",
+      "accountStore": "data/tag-account.json",
+      "anisetteLibs": "data/ani_libs.bin",
+      "pollEveryS": 300,
+      "accessories": [
+        {"name": "Пример-метка", "file": "data/tags/example.json"}
+      ]
+    },
+    "icloud": {
+      "enabled": true,
+      "_note": "Устройства из Find My (iPhone/Mac/Watch…) через pyicloud. Логин один раз: python collector/login.py apple. Пароль тут указывать НЕ обязательно — используется кэш-сессия из sessionDir.",
+      "appleId": "you@icloud.com",
+      "applePassword": "",
+      "sessionDir": "data/icloud-session",
+      "pollEveryS": 300,
+      "devices": true,
+      "people": {
+        "enabled": false,
+        "_note": "Слой «люди» (Find My Friends). В открытых поддерживаемых библиотеках 2026 недоступен: Apple убрала публичный fmf-эндпоинт, а pyicloud FindFriends остался в неслитом PR. Оставлено точкой расширения — см. README, раздел «Люди»."
+      }
+    }
+  },
+  "names": {},
+  "colors": {"tag": "#f59e0b", "device": "#3b82f6", "person": "#10b981"}
+}

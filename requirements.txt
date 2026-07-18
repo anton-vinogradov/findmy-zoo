@@ -1,0 +1,4 @@
+# Метки (AirTag / DIY OpenHaystack) — FindMy.py + встроенный или контейнерный anisette.
+findmy>=0.7
+# Устройства из Find My (iPhone/Mac/Watch/AirPods…) — iCloud web API.
+pyicloud>=1.0

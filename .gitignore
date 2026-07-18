@@ -1,0 +1,13 @@
+.DS_Store
+
+# рантайм-конфиг (копируется из config.example.json при установке) — В НЁМ СЕКРЕТЫ
+collector/config.json
+
+# данные и сессии — НИКОГДА в репу (содержат ключи меток и cookie Apple ID)
+data/history.db*
+data/tag-account.json
+data/ani_libs.bin
+data/icloud-session/
+data/tags/
+
+.venv/
