@@ -1,93 +1,96 @@
 # findmy-zoo 📍
 
-Самохостовая карта: где всё твоё «эппловское» было за последние сутки. Раз в несколько
-минут опрашивает Apple, копит трек в SQLite (скользящее окно 24 ч) и рисует его на карте
-(Leaflet) — по одной цветной линии и маркеру «последняя точка» на сущность.
+**English** | [Русский](README.ru.md)
 
-Ставится одним systemd-сервисом, весь код публичный, **все секреты (Apple ID, ключи
-меток, сессии) — только в локальном конфиге на сервере и в репо не попадают.**
+A self-hosted map of where all your Apple things have been over the last day. Every
+few minutes it polls Apple, accumulates the track in SQLite (a rolling 24-hour window)
+and draws it on a map (Leaflet) — one colored line and a "last seen" marker per entity.
 
-## Что трекается (и что реально работает)
+Installs as a single systemd service, all code is public, and **every secret (Apple ID,
+tag keys, sessions) lives only in a local config on the server and never reaches the repo.**
 
-| Слой | Источник | История за сутки | Статус |
+## What it tracks (and what actually works)
+
+| Layer | Source | 24-hour history | Status |
 |---|---|---|---|
-| 🟠 **Метки** — AirTag'и и DIY-метки (OpenHaystack) | [FindMy.py](https://github.com/malmeloo/FindMy.py) + anisette | ✅ отдаёт Apple (`fetch_location_history`) | рабочее |
-| 🔵 **Устройства** — iPhone/Mac/Watch/AirPods из Find My | [pyicloud](https://github.com/picklepete/pyicloud) `api.devices` | ⚠️ только текущая точка → трек копим сами опросами | рабочее |
-| 🟢 **Люди** — кто делится геопозицией через Find My | — | — | **недоступно, см. ниже** |
+| 🟠 **Tags** — AirTags and DIY tags (OpenHaystack) | [FindMy.py](https://github.com/malmeloo/FindMy.py) + anisette | ✅ served by Apple (`fetch_location_history`) | working |
+| 🔵 **Devices** — iPhone/Mac/Watch/AirPods from Find My | [pyicloud](https://github.com/picklepete/pyicloud) `api.devices` | ⚠️ current point only → we build the track by polling | working |
+| 🟢 **People** — who shares their location via Find My | — | — | **unavailable, see below** |
 
-### Про слой «Люди»
+### About the "People" layer
 
-Отдельного публичного API «Find My Friends» у Apple больше нет — его давно свернули в
-общий Find My, а старый `fmf`-эндпоинт закрыт. В [pyicloud](https://github.com/picklepete/pyicloud)
-сервис друзей так и остался в неслитом PR. Поэтому **через поддерживаемые открытые
-библиотеки в 2026 слой «люди» не строится**, и фейковый модуль сюда не заводился.
-Оставлена чистая точка расширения (`sources.icloud.people.enabled=false`): если появится
-рабочий способ (или ты сам будешь толкать локации семьи из iOS-шортката), допишется одним
-источником в `collector/sources.py`.
+Apple no longer exposes a public "Find My Friends" API — it was folded into Find My long
+ago and the old `fmf` endpoint is closed. In [pyicloud](https://github.com/picklepete/pyicloud)
+the friends service is stuck in an unmerged PR. So **the people layer cannot be built with
+supported open libraries in 2026**, and no fake module was added. A clean extension point is
+left in place (`sources.icloud.people.enabled=false`): if a working method appears (or you
+push your family's locations yourself from an iOS Shortcut), it drops in as a single source
+in `collector/sources.py`.
 
-## Этика и границы 🔒
+## Ethics and boundaries 🔒
 
-Только **твоё** и только те люди, кто **сам** тебе расшарил геопозицию в Find My. Это
-инструмент для своих девайсов/меток и согласившихся близких, не для слежки за посторонними.
-У Apple на этот счёт ещё и анти-сталкерская защита. Никаких чужих ключей/аккаунтов.
+Only **your own** things, and only people who **themselves** shared their location with you in
+Find My. This is a tool for your own devices/tags and consenting close ones — not for tracking
+strangers. Apple also has anti-stalking protection for exactly this. No third-party keys or
+accounts.
 
-## Установка
+## Install
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/anton-vinogradov/findmy-zoo/main/install.sh | bash
-# или от root:  … | sudo bash
+# or as root:  … | sudo bash
 ```
 
-install.sh: venv + зависимости, копирует `config.json` из примера, поднимает
-**macless anisette-контейнер** (`dadoum/anisette-v3-server` на `127.0.0.1:6969`, docker/podman),
-регистрирует systemd-сервис `findmy-zoo` на порту **8815** и ставит команду-мастер.
+install.sh: venv + dependencies, copies `config.json` from the example, brings up a
+**macless anisette container** (`dadoum/anisette-v3-server` on `127.0.0.1:6969`, docker/podman),
+registers the systemd service `findmy-zoo` on port **8815** and installs the setup command.
 
-Затем — **один шаг**, мастер настройки:
+Then — **one step**, the setup wizard:
 
 ```bash
 findmy-zoo-setup
 ```
 
-Спросит Apple ID + пароль + код 2FA (один раз — это защита Apple, обойти нельзя; пароль
-идёт только в кэш-сессию на диске, в репо/конфиг не пишется). Сам залогинит устройства,
-по желанию метки, пропишет `appleId` в конфиг и перезапустит сервис. Прогнать повторно
-можно когда угодно (например, чтобы включить метки позже или обновить сессию).
+It asks for your Apple ID + password + 2FA code (once — this is Apple's protection and can't
+be bypassed; the password goes only into a cached session on disk, never into the repo/config).
+It logs in your devices, optionally your tags, writes `appleId` into the config and restarts the
+service. You can re-run it anytime (e.g. to enable tags later or refresh the session).
 
-<sub>Под капотом — `collector/setup.py`; при желании те же шаги можно сделать точечно через
-`collector/login.py apple|tags`.</sub>
+<sub>Under the hood it's `collector/setup.py`; if you prefer, the same steps can be done
+piecemeal via `collector/login.py apple|tags`.</sub>
 
-## Настройка меток
+## Configuring tags
 
-Ключи AirTag/DIY кладём в `data/tags/*.json` (формат FindMy.py — можно
-сконвертировать из OpenHaystack/macless-haystack, см. примеры в репе FindMy.py) и
-перечисляем в `collector/config.json`:
+Put AirTag/DIY keys into `data/tags/*.json` (FindMy.py format — you can convert them from
+OpenHaystack/macless-haystack, see the examples in the FindMy.py repo) and list them in
+`collector/config.json`:
 
 ```json
 "accessories": [
-  { "name": "Ключи",  "file": "data/tags/keys.json" },
-  { "name": "Рюкзак", "b64key": "<base64-приватный-ключ>" }
+  { "name": "Keys",    "file": "data/tags/keys.json" },
+  { "name": "Backpack", "b64key": "<base64-private-key>" }
 ]
 ```
 
-Не хочешь контейнер — поставь `sources.tags.anisetteUrl: null`, FindMy.py сгенерит
-anisette встроенно.
+Don't want the container? Set `sources.tags.anisetteUrl: null` and FindMy.py will generate
+anisette in-process.
 
-## Как устроено
+## How it works
 
 ```
-collector/hub.py      — фоновые опросы источников + HTTP (stdlib) + /api/points
-collector/sources.py  — TagSource (FindMy.py) и IcloudSource (pyicloud)
-collector/store.py    — SQLite, дедуп по (entity_id, ts), окно retentionH
-collector/setup.py    — мастер настройки в одну команду (findmy-zoo-setup)
-collector/login.py    — точечный логин в Apple (apple|tags), для ручного режима
-index.html/app.js/... — Leaflet-карта, фильтры по типу, автообновление 30 с
-install.sh            — systemd + macless anisette-контейнер
+collector/hub.py      — background source polling + HTTP (stdlib) + /api/points
+collector/sources.py  — TagSource (FindMy.py) and IcloudSource (pyicloud)
+collector/store.py    — SQLite, dedup by (entity_id, ts), retentionH window
+collector/setup.py    — one-command setup wizard (findmy-zoo-setup)
+collector/login.py    — piecemeal Apple login (apple|tags), for manual mode
+index.html/app.js/... — Leaflet map, filter by type, auto-refresh every 30 s
+install.sh            — systemd + macless anisette container
 ```
 
-Тайлы карты по умолчанию с OpenStreetMap (нужен интернет у сервера). Всё остальное —
-локально/оффлайн.
+Map tiles come from OpenStreetMap by default (the server needs internet). Everything else is
+local/offline.
 
-## Приватность данных
+## Data privacy
 
-`data/history.db`, сессии Apple и ключи меток — в `.gitignore` и наружу HTTP не
-отдаются (`/data` и `/collector` заблокированы). Публичный только код.
+`data/history.db`, Apple sessions and tag keys are in `.gitignore` and are not served over
+HTTP (`/data` and `/collector` are blocked). Only the code is public.
