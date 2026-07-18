@@ -130,18 +130,17 @@ class IcloudSource:
         added = 0
         if self.want_devices:
             for dev in self._api.devices:
-                try:
-                    loc = dev.location()
-                except Exception as e:
-                    log.debug("device loc err: %s", e)
-                    loc = None
+                # pyicloud 1.x/2.x: .data — стабильный доступ к словарю устройства.
+                # В 2.x .content стало ._content, а .location — property (не метод),
+                # поэтому читаем локацию прямо из словаря, а не через dev.location().
+                data = getattr(dev, "data", None) or getattr(dev, "content", None) or {}
+                loc = data.get("location")
                 if not loc or loc.get("latitude") is None:
                     continue
-                content = getattr(dev, "content", {}) or {}
-                name = content.get("name") or content.get("deviceDisplayName") or str(content.get("id"))
+                name = data.get("name") or data.get("deviceDisplayName") or str(data.get("id"))
                 ts = loc.get("timeStamp") or loc.get("timestamp") or time.time() * 1000
                 ts = ts / 1000 if ts > 1e12 else ts  # мс -> с
-                batt = content.get("batteryLevel")
+                batt = data.get("batteryLevel")
                 if isinstance(batt, (int, float)) and batt <= 1:
                     batt = round(batt * 100)
                 if store.add(f"dev:{name}", self.kind, name,
